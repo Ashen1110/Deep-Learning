@@ -26,7 +26,7 @@ def dice_loss(y_true, y_pred):
 * reference: https://arxiv.org/pdf/1606.04797.pdf
 
 ## binary_cross_entropy + dice_loss
-
+**測試中**
 ## IOU
 有點類似於 dice loss                                                                                               
 ![image](https://user-images.githubusercontent.com/67892268/172197969-9449e747-f392-4cad-ba6b-b19e2d574512.png)
@@ -54,6 +54,7 @@ Tversky 係數是由 dice 係數和 Jaccard 係數的一種廣義係數，定義
 
 此時，A 為預測值，B 為真實標籤
 當  $\alpha$  和 $ \beta $ 為 0.5 時，Tversky 係數 = dice 係數；$ \alpha $ 和 $ \beta $ 為 1 時，Tversky 係數 = Jaccard 係數
+
 在 T(A, B) 中，$ |A - B| $ 代表假陽性；$ |B - A| $ 代表假陰性，透過調整 $\alpha$  和 $ \beta $ 分別控制兩者的權衡
 
 
@@ -76,11 +77,45 @@ def tversky_loss(y_true, y_pred):
 * 此方法考慮到處理的數據類別極度不均衡的情況下的數據(原本該標記的卻沒標記、原本沒標的卻標了)，在犧牲一定精度的情況下，希望可以提高像素分類的 Recall 值 (預測為正例的真實正例佔所有真實正例的比例)
 * 但是此方法看來還是沒能逃過黑色背景佔比太大的問題
 
-## focal_loss + tversky_loss
-
 ## generalized_dice_loss
 在使用 dice 時，對小目標是非常不利的。因為在只有前景和背景的情況下，小目標一旦有部份像素預測錯誤，就容易導致 Dice 大幅度的變動，導致梯度變化劇烈、訓練不穩定。
 因此，generalized dice loss 將多個類別的 dice 進行整合，使用一個指標對分割結果進行量化。
 
 其公式如下：                                                                                                
 ![image](https://user-images.githubusercontent.com/67892268/172205562-e4e5d9a4-53e1-4d5a-96fe-b0f7417c1787.png)
+
+其中 $ r_ln $ 為類別在第 n 個像素的標準值，$ p_ln $ 則是相應的預測概率值。最關鍵的是 $ w_l $，為每個類別的權重，其公式如下：
+![image](https://user-images.githubusercontent.com/67892268/172206812-da7df15f-7d59-4802-b2df-d25919da0ed0.png)
+
+這樣就能達到與 Dice 係數之間的平衡。 
+
+程式碼：
+``` py
+def generalized_dice_coeff(y_true, y_pred):
+    Ncl = y_pred.shape[-1]
+    w = K.zeros(shape=(Ncl,))
+    w = K.sum(y_true, axis=(0, 1, 2))
+    w = 1/(w**2+0.000001)
+    numerator = y_true*y_pred
+    numerator = w*K.sum(numerator, (0,1,2,3))
+    numerator = K.sum(numerator)
+    
+    denominator = y_true+y_pred
+    denominator = w*K.sum(denominator, (0,1,2,3))
+    denominator = K.sum(denominator)
+    
+    gen_dice_coef = 2*numerator/denominator
+    return gen_dice_coef
+
+def generalized_dice_loss(y_true, y_pred):
+    return 1-generalized_dice_coeff(y_true, y_pred)
+```
+
+結論：
+* 訓練的穩定度也沒有很好QAQ
+* 以本質上來說都是根據評測標準所設計的 loss function，應該還是普遍受到了目標太小，導致訓練不穩定的問題。
+
+# References
+* A survey of loss functions for semantic segmentation: https://arxiv.org/pdf/2006.14822.pdf
+* Tversky_loss: https://arxiv.org/pdf/1706.05721.pdf
+* focal loss + dice loss: https://arxiv.org/pdf/2102.04525.pdf
