@@ -119,3 +119,4 @@ def generalized_dice_loss(y_true, y_pred):
 * A survey of loss functions for semantic segmentation: https://arxiv.org/pdf/2006.14822.pdf
 * Tversky_loss: https://arxiv.org/pdf/1706.05721.pdf
 * focal loss + dice loss: https://arxiv.org/pdf/2102.04525.pdf
+* geberalized dice loss: https://arxiv.org/pdf/1707.03237.pdf
