@@ -1,6 +1,7 @@
 # Loss function
 
 ## binary_crossentropy
+目前採用的 loss function
 
 ## dice_loss
 dice loss 可以簡單的理解為兩個論括區域的相似程度，如下圖公式，A、B 表示兩個輪廓區域所包含的點集合
@@ -26,7 +27,24 @@ def dice_loss(y_true, y_pred):
 * reference: https://arxiv.org/pdf/1606.04797.pdf
 
 ## binary_cross_entropy + dice_loss
-**測試中**
+因為採用的 binary_crossentropy 所框選出來的範圍有點大，因此試試看利用 dice loss 去平衡目標與背景之間的比例。
+程式碼:
+``` py
+def dsc(y_true, y_pred):
+    smooth=1
+    intersection = K.sum(y_true*y_pred, axis=[1,2])
+    union = K.sum(y_true, axis=[1,2]) + K.sum(y_pred, axis=[1,2])
+    score = K.mean((2. * intersection + smooth)/(union + smooth), axis=0)
+    return score
+def bce_dice_loss(y_true, y_pred):
+    loss = binary_crossentropy(y_true, y_pred) - dsc(y_true, y_pred)
+    return loss
+```
+結論:
+* 兩者之間的比例找不到一個好的調適點，造成以下兩種情況:
+    * 跟原本只用 binary_crossentopy 來計算時的結果差不多
+    * 全黑
+
 ## IOU
 有點類似於 dice loss                                                                                               
 ![image](https://user-images.githubusercontent.com/67892268/172197969-9449e747-f392-4cad-ba6b-b19e2d574512.png)
